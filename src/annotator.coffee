@@ -616,21 +616,27 @@ class Annotator extends Delegator
     if @ignoreMouseup
       return
 
-    # Get the currently selected ranges.
-    @selectedRanges = this.getSelectedRanges()
+    # Use setTimeout so that any pending change in selection finishes. Happens when
+    # an existing selection is clicked.
+    setTimeout (do (event)=> =>
+        if getSelection().toString()
+          # Get the currently selected ranges.
+          @selectedRanges = this.getSelectedRanges()
 
-    for range in @selectedRanges
-      container = range.commonAncestor
-      if $(container).hasClass('annotator-hl')
-        container = $(container).parents('[class!=annotator-hl]')[0]
-      return if this.isAnnotator(container)
+          for range in @selectedRanges
+            container = range.commonAncestor
+            if $(container).hasClass('annotator-hl')
+              container = $(container).parents('[class!=annotator-hl]')[0]
+            return if this.isAnnotator(container)
 
-    if event and @selectedRanges.length
-      @adder
-        .css(Util.mousePosition(event, @wrapper[0]))
-        .show()
-    else
-      @adder.hide()
+          if event and @selectedRanges.length
+            @adder
+              .css(Util.mousePosition(event, @wrapper[0]))
+              .show()
+        else
+          @adder.hide()
+      )
+      , 0
 
   # Public: Determines if the provided element is part of the annotator plugin.
   # Useful for ignoring mouse actions on the annotator elements.
