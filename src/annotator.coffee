@@ -12,7 +12,7 @@ class Annotator extends Delegator
   events:
     ".annotator-adder button click":     "onAdderClick"
     ".annotator-adder button mousedown": "onAdderMousedown"
-    ".annotator-hl mouseover":           "onHighlightMouseover"
+    ".annotator-hl mouseover":           "startViewerShowTimer"
     ".annotator-hl mouseout":            "startViewerHideTimer"
 
   html:
@@ -35,6 +35,8 @@ class Annotator extends Delegator
   ignoreMouseup: false
 
   viewerHideTimer: null
+
+  viewerShowTimer: null
 
   # Public: Creates an instance of the Annotator. Requires a DOM Element in
   # which to watch for annotations as well as any options.
@@ -263,7 +265,7 @@ class Annotator extends Delegator
   #
   #   annotator.on 'beforeAnnotationCreated', (annotation) ->
   #     annotation.myProperty = 'This is a custom property'
-  #   annotator.createAnnotation() # Returns {myProperty: "This is a…"}
+  #   annotator.createAnnotation() # Returns {myProperty: "This is aâ€¦"}
   #
   # Returns a newly created annotation Object.
   createAnnotation: () ->
@@ -402,7 +404,7 @@ class Annotator extends Delegator
       return false
 
   # Public: Wraps the DOM Nodes within the provided range with a highlight
-  # element of the specified class and returns the highlight Elements.
+  # element of the specified classÂ and returns the highlight Elements.
   #
   # normedRange - A NormalizedRange to be highlighted.
   # cssClass - A CSS class to use for the highlight (default: 'annotator-hl')
@@ -517,8 +519,32 @@ class Annotator extends Delegator
   #   )
   #
   # Returns itself to allow chaining.
-  showViewer: (annotations, location) =>
-    @viewer.element.css(location)
+  showViewer: (event) =>
+    # Don't do anything if we're making a selection
+    return false if @mouseIsDown
+
+    annotations = $(event.target)
+      .parents('.annotator-hl')
+      .addBack()
+      .map( -> return $(this).data("annotation"))
+      .toArray()
+
+    isSame = annotations.length is @viewer.annotations.length
+    if isSame then for annotation in annotations
+      if not (annotation in @viewer.annotations)
+        isSame = false
+        break
+
+    if @viewer.isShown()
+      if isSame
+        # The viewer is already displayed with the right annotation.
+        return false
+      else
+        # Other hide it. We need to show it afresh with the new annotation.
+        @viewer.hide()
+
+    # Now show the viewer with the wanted annotations
+    @viewer.element.css(Util.mousePosition(event, @wrapper[0]))
     @viewer.load(annotations)
 
     this.publish('annotationViewerShown', [@viewer, annotations])
@@ -532,6 +558,17 @@ class Annotator extends Delegator
     # Don't do this if timer has already been set by another annotation.
     if not @viewerHideTimer
       @viewerHideTimer = setTimeout @viewer.hide, 250
+    @clearViewerShowTimer()
+
+  # Annotator#element event callback. Allows 250ms for mouse pointer to rest on the
+  # highlight. Don't show if mouse moves out within this time. Reduces flicker.
+  #
+  # Returns nothing.
+  startViewerShowTimer: (event)=>
+    # Don't do this if timer has already been set by another annotation.
+    if not @viewerShowTimer
+      @viewerShowTimer = setTimeout (do (event)=> => @showViewer(event)), 250
+    @clearViewerHideTimer()
 
   # Viewer#element event callback. Clears the timer set by
   # Annotator#startViewerHideTimer() when the @viewer is moused over.
@@ -539,7 +576,15 @@ class Annotator extends Delegator
   # Returns nothing.
   clearViewerHideTimer: () =>
     clearTimeout(@viewerHideTimer)
-    @viewerHideTimer = false
+    @viewerHideTimer = null
+
+  # Viewer#element event callback. Clears the timer set by
+  # Annotator#startViewerShowTimer() when the mouse moves out.
+  #
+  # Returns nothing.
+  clearViewerShowTimer: () =>
+    clearTimeout(@viewerShowTimer)
+    @viewerShowTimer = null
 
   # Annotator#element callback. Sets the @mouseIsDown property used to
   # determine if a selection may have started to true. Also calls
@@ -600,31 +645,6 @@ class Annotator extends Delegator
   # Returns true if the element is a child of an annotator element.
   isAnnotator: (element) ->
     !!$(element).parents().addBack().filter('[class^=annotator-]').not(@wrapper).length
-
-  # Annotator#element callback. Displays viewer with all annotations
-  # associated with highlight Elements under the cursor.
-  #
-  # event - A mouseover Event object.
-  #
-  # Returns nothing.
-  onHighlightMouseover: (event) =>
-    # Cancel any pending hiding of the viewer.
-    this.clearViewerHideTimer()
-
-    # Don't do anything if we're making a selection
-    return false if @mouseIsDown
-
-    # If the viewer is already shown, hide it first
-    @viewer.hide() if @viewer.isShown()
-
-    annotations = $(event.target)
-      .parents('.annotator-hl')
-      .addBack()
-      .map( -> return $(this).data("annotation"))
-      .toArray()
-
-    # Now show the viewer with the wanted annotations
-    this.showViewer(annotations, Util.mousePosition(event, @wrapper[0]))
 
   # Annotator#element callback. Sets @ignoreMouseup to true to prevent
   # the annotation selection events firing when the adder is clicked.
