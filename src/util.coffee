@@ -166,9 +166,18 @@ Util.mousePosition = (e, offsetEl) ->
   unless $(offsetEl).css('position') in ['absolute', 'fixed', 'relative']
     offsetEl = $(offsetEl).offsetParent()[0]
   offset = $(offsetEl).offset()
+
+  # When one or more of the parents are zoomed (css style 'zoom'), then setting any coordinates
+  # have to factor the zoom in
+  zoomParents = $(offsetEl).parents('[style*="zoom"]')
+  zoom = 1
+  if zoomParents.length
+    zoomParents.each ->
+      zoom *= $(@).css('zoom')
+
   {
-    top:  e.pageY - offset.top,
-    left: e.pageX - offset.left
+    top:  e.pageY/zoom - offset.top,
+    left: e.pageX/zoom - offset.left
   }
 
 # Checks to see if an event parameter is provided and contains the prevent
