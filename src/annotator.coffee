@@ -568,6 +568,10 @@ class Annotator extends Delegator
     # Don't show the viewer if there's a selection
     return unless window.getSelection().toString() is ""
 
+    # Don't show the viewer if an editor is displayed. Otherwise, empty viewer might show
+    # or the viewer might be mostly obscured by the editor.
+    return if @editor.isShown()
+
     clearTimeout(@viewerShowTimer)
     @viewerShowTimer = setTimeout (do (event)=> => @showViewer(event)), 250
     @clearViewerHideTimer()
