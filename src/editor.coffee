@@ -334,6 +334,9 @@ class Annotator.Editor extends Annotator.Widget
     controls  = editor.find('.annotator-controls')
     throttle  = false
 
+    # Unbind any previous binding so the handler doesn't get called multiple times for same event
+    controls.unbind 'mousedown', onMousedown
+
     onMousedown = (event) ->
       if event.target == this
         mousedown = {
