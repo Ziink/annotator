@@ -565,9 +565,11 @@ class Annotator extends Delegator
   #
   # Returns nothing.
   startViewerShowTimer: (event)=>
-    # Don't do this if timer has already been set by another annotation.
-    if not @viewerShowTimer
-      @viewerShowTimer = setTimeout (do (event)=> => @showViewer(event)), 250
+    # Don't show the viewer if there's a selection
+    return unless window.getSelection().toString() is ""
+
+    clearTimeout(@viewerShowTimer)
+    @viewerShowTimer = setTimeout (do (event)=> => @showViewer(event)), 250
     @clearViewerHideTimer()
 
   # Viewer#element event callback. Clears the timer set by
