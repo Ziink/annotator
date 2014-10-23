@@ -298,9 +298,17 @@ class Annotator.Editor extends Annotator.Widget
   processKeypress: (event) =>
     if event.keyCode is 27 # "Escape" key => abort.
       this.hide()
-    else if event.keyCode is 13 and !event.shiftKey
+    else if event.keyCode is 13 and event.shiftKey
       # If "return" was pressed without the shift key, we're done.
       this.submit()
+    else if event.keyCode is 9 and !event.shiftKey # Tab key
+      event.preventDefault()
+      ed = event.target
+      start = ed.selectionStart;
+      ed.value = ed.value.substring(0,ed.selectionStart) + "\t" + ed.value.substring(ed.selectionEnd);
+      ed.selectionEnd = start+1;
+
+#      event.stopPropagation()
 
   # Event callback. Removes the focus class from the submit button when the
   # cancel button is hovered.
