@@ -161,11 +161,23 @@ Util.maxZIndex = ($elements) ->
             parseFloat($(el).css('z-index')) or -1
   Math.max.apply(Math, all)
 
+# getZoomedOffset : Similar to jQuery.offset but takes into account the zoom
+getZoomedOffset = (elem, zoom)->
+  docElem = document.documentElement
+  box = { top: 0, left: 0 }
+  if elem.getBoundingClientRect
+    box = elem.getBoundingClientRect()
+  return {
+    # Not sure if clientTop & clientLeft has to be adjusted for the zoom
+    # It's usually zero
+    top: box.top  * zoom + window.pageYOffset - docElem.clientTop * zoom
+    left: box.left  * zoom + window.pageXOffset - docElem.clientLeft * zoom
+  }
+
 Util.mousePosition = (e, offsetEl) ->
   # If the offset element is not a positioning root use its offset parent
   unless $(offsetEl).css('position') in ['absolute', 'fixed', 'relative']
     offsetEl = $(offsetEl).offsetParent()[0]
-  offset = $(offsetEl).offset()
 
   # When one or more of the parents are zoomed (css style 'zoom'), then setting any coordinates
   # have to factor the zoom in
@@ -174,8 +186,9 @@ Util.mousePosition = (e, offsetEl) ->
   if zoomParents.length
     zoomParents.each ->
       zoom *= $(@).css('zoom')
+  offset = getZoomedOffset(offsetEl, zoom)
 
-  {
+  return {
     top:  e.pageY/zoom - offset.top,
     left: e.pageX/zoom - offset.left
   }
