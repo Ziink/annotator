@@ -18,6 +18,7 @@ class Annotator extends Delegator
   html:
     adder:   '<div class="annotator-adder"><button>' + _t('Annotate') + '</button></div>'
     wrapper: '<div class="annotator-wrapper"></div>'
+    wrapperClass: 'annotator-wrapper'
 
   options: # Configuration options
     readOnly: false # Start Annotator in read-only mode. No controls will be shown.
@@ -81,15 +82,17 @@ class Annotator extends Delegator
   #
   # Returns itself to allow chaining.
   _setupWrapper: ->
-    @wrapper = $(@html.wrapper)
-
-    # We need to remove all scripts within the element before wrapping the
-    # contents within a div. Otherwise when scripts are reappended to the DOM
-    # they will re-execute. This is an issue for scripts that call
-    # document.write() - such as ads - as they will clear the page.
-    @element.find('script').remove()
-    @element.wrapInner(@wrapper)
-    @wrapper = @element.find('.annotator-wrapper')
+    @element.addClass(@html.wrapperClass)
+    @wrapper = @element
+#    @wrapper = $(@html.wrapper)
+#
+#    # We need to remove all scripts within the element before wrapping the
+#    # contents within a div. Otherwise when scripts are reappended to the DOM
+#    # they will re-execute. This is an issue for scripts that call
+#    # document.write() - such as ads - as they will clear the page.
+#    @element.find('script').remove()
+#    @element.wrapInner(@wrapper)
+#    @wrapper = @element.find('.annotator-wrapper')
 
     this
 
@@ -199,8 +202,9 @@ class Annotator extends Delegator
       $(this).contents().insertBefore(this)
       $(this).remove()
 
-    @wrapper.contents().insertBefore(@wrapper)
-    @wrapper.remove()
+#    @wrapper.contents().insertBefore(@wrapper)
+#    @wrapper.remove()
+    @element.removeClass(@html.wrapperClass)
     @element.data('annotator', null)
 
     for name, plugin of @plugins
