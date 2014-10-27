@@ -717,16 +717,43 @@ class Annotator extends Delegator
     # Display the editor.
     this.showEditor(annotation, position)
 
-  # Annotator#viewer callback function. Displays the Annotator#editor in the
-  # positions of the Annotator#viewer and loads the passed annotation for
-  # editing.
+  # Add the current selection as an annotation. If the entire selection is not entirely within
+  # the root element of the annotator, then return false.
+  # If highlightOnly is true, then do not bring up the editor
+  addSelection: (highlightOnly)->
+    @selectedRanges = this.getSelectedRanges()
+
+    for range in @selectedRanges
+      container = range.commonAncestor
+      if $(container).hasClass('annotator-hl')
+        container = $(container).parents('[class!=annotator-hl]')[0]
+      return false if this.isAnnotator(container)
+    if !highlightOnly
+      selection = getSelection()
+      if selection && selection.type == 'Range'
+        range = selection.getRangeAt(0)
+        rect = range.getClientRects()[0]
+        container = range.commonAncestorContainer
+      return false unless rect
+    annotation = this.setupAnnotation(this.createAnnotation())
+    @adder.hide()    # In case it's visible
+    if !highlightOnly
+      zoomParents = $(container).parents('[style*="zoom"]')
+      zoom = 1
+      if zoomParents.length
+        zoomParents.each ->
+          zoom *= $(@).css('zoom')
+
+      position = {top: rect.top + window.pageYOffset/zoom, left: rect.left + window.pageXOffset/zoom}
+      @editAnnotation(annotation, position)
+    this.publish('annotationCreated', [annotation])
+
+  # Displays the Annotator#editor in the specified position.
   #
   # annotation - An annotation Object for editing.
   #
   # Returns nothing.
-  onEditAnnotation: (annotation) =>
-    offset = @viewer.element.position()
-
+  editAnnotation: (annotation, position) =>
     # Subscribe once to editor events
 
     # Update the annotation when the editor is saved
@@ -742,9 +769,21 @@ class Annotator extends Delegator
     this.subscribe('annotationEditorHidden', cleanup)
     this.subscribe('annotationEditorSubmit', update)
 
+    this.showEditor(annotation, position)
+
+  # Annotator#viewer callback function. Displays the Annotator#editor in the
+  # positions of the Annotator#viewer and loads the passed annotation for
+  # editing.
+  #
+  # annotation - An annotation Object for editing.
+  #
+  # Returns nothing.
+  onEditAnnotation: (annotation) =>
+    offset = @viewer.element.position()
     # Replace the viewer with the editor
     @viewer.hide()
-    this.showEditor(annotation, offset)
+    @editAnnotation(annotation, offset)
+
 
   # Annotator#viewer callback function. Deletes the annotation provided to the
   # callback.
